@@ -1,0 +1,12 @@
+.env
+/data
+/combined_files
+/.venv
+/GoogleAcc
+/website
+/files
+/tgBot
+/backfiles
+/old_code
+/tests
+/__pycache__
