@@ -6,7 +6,7 @@ from pathlib import Path
 import argparse
 import pandas as pd
 
-def main(skip_fetch=False, show_cache=False, analyze_only=False, search_token=None):
+def main(skip_fetch=False, show_cache=False, analyze_only=False, search_token=None, ignore_pair=None):
     """
     Run the analysis with various options
     
@@ -15,11 +15,17 @@ def main(skip_fetch=False, show_cache=False, analyze_only=False, search_token=No
         show_cache (bool): If True, shows contents of the CoinGecko cache
         analyze_only (bool): If True, runs analysis without uploading to Google Sheets
         search_token (str): Token symbol to search for in cache
+        ignore_pair (str): Trading pair to add to ignore list
     """
     # Initialize components
     binance = BinanceOperations()
     external = ExternalServices()
     analysis = Analysis(binance, external)
+    
+    if ignore_pair:
+        binance.add_to_ignore_list(ignore_pair)
+        print(f"Added {ignore_pair} to ignore list")
+        return
     
     # Set pandas display options for better output
     pd.set_option('display.max_rows', 1000)
@@ -60,9 +66,12 @@ if __name__ == "__main__":
                        help='Run analysis only with optional upload prompt')
     parser.add_argument('search_token', nargs='?', default=None,
                        help='Token symbol to search for in cache (e.g., BTC)')
+    parser.add_argument('--ignore-pair', type=str,
+                       help='Add trading pair to ignore list (e.g., WMT/USDT)')
     args = parser.parse_args()
     
     main(skip_fetch=args.skip_fetch, 
          show_cache=args.show_cache,
          analyze_only=args.analyze_only,
-         search_token=args.search_token) 
+         search_token=args.search_token,
+         ignore_pair=args.ignore_pair) 

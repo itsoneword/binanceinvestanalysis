@@ -17,8 +17,7 @@ class BinanceOperations:
         self.exchange = ccxt.binance({"apiKey": self.api_key, "secret": self.api_secret})
         
         # Load pairs to skip
-        with open('Data/pair_skip.json', 'r') as file:
-            self.pairs_to_skip = json.load(file)
+        self.pairs_to_skip = self.load_ignore_list()
         
     def get_account_balance(self):
         """Get current account balance"""
@@ -101,4 +100,48 @@ class BinanceOperations:
 
     def additional_purchase(self, Q1, P1, P2):
         """Calculate additional purchase amount for averaging strategy"""
-        return Q1 * (P1 - P2) / (P2 - (P1 + P2) / 2) 
+        return Q1 * (P1 - P2) / (P2 - (P1 + P2) / 2)
+
+    def load_ignore_list(self):
+        """Load list of pairs to ignore from JSON file"""
+        try:
+            if not os.path.exists("./Data/pair_skip.json"):
+                # Create initial empty ignore list
+                self.save_ignore_list([])
+                return []
+            
+            with open("./Data/pair_skip.json", "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading ignore list: {e}")
+            return []
+
+    def save_ignore_list(self, pairs):
+        """Save ignore list to JSON file"""
+        try:
+            os.makedirs("./Data", exist_ok=True)
+            with open("./Data/pair_skip.json", "w") as f:
+                json.dump(pairs, f, indent=4)
+        except Exception as e:
+            print(f"Error saving ignore list: {e}")
+
+    def add_to_ignore_list(self, pair):
+        """Add a trading pair to the ignore list"""
+        pairs = self.load_ignore_list()
+        
+        # Standardize pair format
+        pair = pair.upper()
+        
+        if pair not in pairs:
+            pairs.append(pair)
+            self.save_ignore_list(pairs)
+            print(f"Added {pair} to ignore list")
+            # Update current pairs_to_skip
+            self.pairs_to_skip = pairs
+        else:
+            print(f"{pair} is already in ignore list")
+        
+        # Show current ignore list
+        print("\nCurrent ignore list:")
+        for p in sorted(pairs):
+            print(f"- {p}") 

@@ -37,9 +37,19 @@ class ExternalServices:
         
     def load_token_mappings(self):
         """Load token ID mappings"""
-        with open("tokens.py", "r") as f:
-            exec(f.read(), globals())
-            return globals().get("COIN_IDS", {})
+        try:
+            if not os.path.exists("tokens.py"):
+                # Create initial tokens.py with empty dictionary
+                with open("tokens.py", "w") as f:
+                    f.write("COIN_IDS = {\n}\n")
+                return {}
+            
+            with open("tokens.py", "r") as f:
+                exec(f.read(), globals())
+                return globals().get("COIN_IDS", {})
+        except Exception as e:
+            print(f"Error loading token mappings: {e}")
+            return {}
         
     def get_coin_id(self, symbol: str) -> str:
         """Get CoinGecko ID for a coin symbol"""
@@ -226,6 +236,7 @@ class ExternalServices:
     def interactive_token_mapping(self, symbol):
         """
         Interactively match token symbols with CoinGecko IDs
+        First tries exact symbol match, then falls back to interactive selection
         
         Args:
             symbol (str): Token symbol to search for
@@ -233,34 +244,36 @@ class ExternalServices:
             str: Selected coin ID or None if not found
         """
         search_term = symbol.upper()
-        matches = []
+        exact_matches = []
         
-        # Search in cache
+        # Search in cache for exact symbol matches
         cache_data = self.load_from_cache()
         for coin in cache_data:
-            if (search_term in coin.get('symbol', '').upper() or 
-                search_term in coin.get('id', '').upper() or 
-                search_term in coin.get('name', '').upper()):
-                matches.append({
+            if coin.get('symbol', '').upper() == search_term:
+                exact_matches.append({
                     'symbol': coin.get('symbol', '').upper(),
                     'name': coin.get('name', ''),
                     'id': coin.get('id', ''),
                     'market_cap': self.format_market_cap(coin.get('market_cap', 0))
                 })
         
-        if not matches:
+        # If no exact matches found
+        if not exact_matches:
+            print(f"\nNo exact matches found for symbol '{symbol}'")
             return None
         
-        if len(matches) == 1:
-            return matches[0]['id']
+        # If exactly one match found
+        if len(exact_matches) == 1:
+            print(f"\nFound exact match for {symbol}: {exact_matches[0]['name']} ({exact_matches[0]['id']})")
+            return exact_matches[0]['id']
         
-        # Multiple matches found - ask user to select
-        print(f"\nMultiple matches found for {symbol}:")
+        # Multiple exact matches found - ask user to select
+        print(f"\nMultiple exact matches found for {symbol}:")
         print("=" * 80)
         print(f"{'#':<3} {'Symbol':<10} {'Name':<30} {'ID':<25} {'Market Cap':<12}")
         print("-" * 80)
         
-        for idx, coin in enumerate(matches, 1):
+        for idx, coin in enumerate(exact_matches, 1):
             print(f"{idx:<3} {coin['symbol']:<10} {coin['name'][:28]:<30} {coin['id']:<25} {coin['market_cap']:<12}")
         
         while True:
@@ -271,8 +284,8 @@ class ExternalServices:
                 choice = int(choice)
                 if choice == 0:
                     return None
-                if 1 <= choice <= len(matches):
-                    return matches[choice-1]['id']
+                if 1 <= choice <= len(exact_matches):
+                    return exact_matches[choice-1]['id']
                 print("Invalid number, please try again")
             except ValueError:
                 print("Please enter a valid number")
@@ -280,16 +293,28 @@ class ExternalServices:
     def update_token_mappings(self, new_mappings):
         """Update tokens.py with new mappings"""
         try:
+            if not os.path.exists("tokens.py"):
+                # Create new tokens.py file
+                content = "COIN_IDS = {\n"
+                for key, value in sorted(new_mappings.items()):
+                    content += f'    "{key}": "{value}",\n'
+                content += "}\n"
+                
+                with open("tokens.py", "w") as f:
+                    f.write(content)
+                print("Created new tokens.py file with mappings")
+                return
+            
             # Read existing mappings
             with open("tokens.py", "r") as f:
                 content = f.read()
-                
+            
             # Parse existing COIN_IDS dictionary
             start = content.find("{")
             end = content.rfind("}")
             if start == -1 or end == -1:
                 raise ValueError("Could not parse existing COIN_IDS dictionary")
-                
+            
             # Create updated dictionary content
             existing_dict = eval(content[start:end+1])
             existing_dict.update(new_mappings)
@@ -307,7 +332,7 @@ class ExternalServices:
             new_content = content[:start] + dict_content
             with open("tokens.py", "w") as f:
                 f.write(new_content)
-                
+            
             print("Token mappings updated successfully")
             
         except Exception as e:
