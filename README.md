@@ -1,6 +1,6 @@
 # Binance Portfolio Analyzer
 
-Version: 0.1.0 (Released: 2024-02-25)
+Version: 0.1.0 (Released: 2025-02-15)
 
 ## Description
 A comprehensive tool for analyzing Binance trading portfolio, providing detailed insights into trading performance, market caps, and portfolio distribution across different market cap cohorts.
