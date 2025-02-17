@@ -16,6 +16,12 @@ class BinanceOperations:
         self.api_secret = os.getenv("BINANCE_SECRET_KEY")
         self.exchange = ccxt.binance({"apiKey": self.api_key, "secret": self.api_secret})
         
+        # Setup cache directories
+        self.cache_dir = Path("Cache")
+        self.data_dir = Path("Data")
+        self.cache_dir.mkdir(exist_ok=True)
+        self.data_dir.mkdir(exist_ok=True)
+        
         # Load pairs to skip
         self.pairs_to_skip = self.load_ignore_list()
         
@@ -47,10 +53,10 @@ class BinanceOperations:
         currencies = list(set(balance.keys()))
 
         # Check if existing trades file exists
-        csv_file = Path("Data/all_trades.csv")
-        if csv_file.exists():
+        trades_file = self.data_dir / "all_trades.csv"
+        if trades_file.exists():
             try:
-                all_trades = pd.read_csv(csv_file)
+                all_trades = pd.read_csv(trades_file)
                 last_timestamp = max(all_trades["timestamp"].max(), start_timestamp)
             except:
                 all_trades = pd.DataFrame()
@@ -86,14 +92,16 @@ class BinanceOperations:
         if 'info' in all_trades.columns:
             all_trades.drop(columns=["info"], inplace=True)
         all_trades.drop_duplicates(subset="datetime", keep="first", inplace=True)
-        all_trades.to_csv("Data/all_trades.csv", index=False)
+        trades_file.parent.mkdir(exist_ok=True)
+        all_trades.to_csv(trades_file, index=False)
 
         return all_trades
 
     def get_trades_analysis_data(self):
         """Get current balance and trades data for analysis"""
         total_balance = self.exchange.fetch_balance()["total"]
-        trades_df = pd.read_csv("./Data/all_trades.csv")
+        trades_file = self.data_dir / "all_trades.csv"
+        trades_df = pd.read_csv(trades_file)
         trades_df["symbol"] = trades_df["symbol"].str.replace("BUSD", "USDT")
         
         return trades_df, total_balance
@@ -105,12 +113,13 @@ class BinanceOperations:
     def load_ignore_list(self):
         """Load list of pairs to ignore from JSON file"""
         try:
-            if not os.path.exists("./Data/pair_skip.json"):
+            ignore_file = self.cache_dir / "pair_skip.json"
+            if not ignore_file.exists():
                 # Create initial empty ignore list
                 self.save_ignore_list([])
                 return []
             
-            with open("./Data/pair_skip.json", "r") as f:
+            with open(ignore_file, 'r') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading ignore list: {e}")
@@ -119,8 +128,9 @@ class BinanceOperations:
     def save_ignore_list(self, pairs):
         """Save ignore list to JSON file"""
         try:
-            os.makedirs("./Data", exist_ok=True)
-            with open("./Data/pair_skip.json", "w") as f:
+            ignore_file = self.cache_dir / "pair_skip.json"
+            self.cache_dir.mkdir(exist_ok=True)
+            with open(ignore_file, 'w') as f:
                 json.dump(pairs, f, indent=4)
         except Exception as e:
             print(f"Error saving ignore list: {e}")

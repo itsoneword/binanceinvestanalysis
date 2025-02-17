@@ -15,8 +15,13 @@ class ExternalServices:
     def __init__(self):
         # Initialize CoinGecko
         self.cg = CoinGeckoAPI()
-        self.cache_file = "./Data/coingecko_cache.json"
+        # Update cache path to use Cache folder
+        self.cache_dir = Path("Cache")
+        self.cache_file = self.cache_dir / "coingecko_cache.json"
         self.max_cache_hours = 2
+        
+        # Ensure Cache directory exists
+        self.cache_dir.mkdir(exist_ok=True)
         
         # Load token mappings
         self.coin_ids = self.load_token_mappings()
@@ -90,10 +95,8 @@ class ExternalServices:
         for entry in all_data:
             entry['_timestamp'] = current_time
 
-        # Ensure Data directory exists
-        os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
-        
         # Save to cache
+        self.cache_dir.mkdir(exist_ok=True)
         with open(self.cache_file, 'w') as f:
             json.dump(all_data, f)
 

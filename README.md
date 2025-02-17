@@ -72,9 +72,11 @@ binance-analyzer/
 ├── binance_operations.py # Binance API interactions
 ├── external_services.py  # External services (CoinGecko, Google)
 ├── tokens.py            # Token mapping configurations
+├── Cache/               # Cache storage
+│   ├── coingecko_cache.json
+│   └── pair_skip.json
 ├── Data/                # Data storage
-│   ├── all_trades.csv
-│   └── coingecko_cache.json
+│   └── all_trades.csv
 ├── backfiles/           # Backup storage
 └── old_code/           # Legacy code archive
 
